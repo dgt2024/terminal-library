@@ -4,6 +4,17 @@
 #include <stdlib.h>
 #include <math.h>
 #include <unistd.h>
+#define TL_BLACK ((Color){ 0, 0, 0 })
+#define TL_RED ((Color){ 255, 0, 0 })
+#define TL_GREEN ((Color){ 0, 255, 0 })
+#define TL_BLUE ((Color){ 0, 0, 255 })
+#define TL_YELLOW ((Color){ 255, 255, 0 })
+#define TL_MAGENTA ((Color){ 255, 0, 255 })
+#define TL_CYAN ((Color){ 0, 255, 255 })
+#define TL_WHITE ((Color){ 255, 255, 255 })
+#define TL_GRAY ((Color){ 128, 128, 128 })
+int tl_height = 100;
+int tl_width = 100;
 typedef struct Color {
 	uint8_t r, g, b;
 } Color;
@@ -11,33 +22,48 @@ typedef struct Vector2 {
 	int x, y;
 	Color c;
 } Vector2;
-typedef struct Vector1a {
+struct Vector1a {
 	struct Vector1 {
 		int x;
 		Color c;
 	} d;
 	struct Vector1a* n;
-} Vector2a;
+};
 typedef struct Vector3 {
 	float x, y, z;
 	Color c;
 } Vector3;
-Vector2a* getVLine(Vector2a* ptr, Vector2 n1, Vector2 n2) {
-	Vector2a* w = ptr;
+void freeV1a(struct Vector1a* init) {
+	while(init) {
+		struct Vector1a* x = init;
+		init = init->n;
+		free(x);
+	}
+}
+struct Vector1 atV1a(struct Vector1a* init, int x) {
+	for(int a = 0; a < x; a++) init = init->n;
+	return init->d;
+}
+int cmp_v(Vector2 n1, Vector2 n2) {
+	if(n1.y == n2.y) return n1.x > n2.x;
+	return n1.y < n2.y;
+}
+int cmp_int(int f, int s) {
+	return (f > s) - (f < s);
+}
+struct Vector1a* getVLine(struct Vector1a* ptr, Vector2 n1, Vector2 n2) {
+	struct Vector1a* w = ptr;
 	int dy = n2.y - n1.y;
 	for(int a = 1; a <= dy; a++) {
 		w->d.x = n1.x + (int)(a * (n2.x - n1.x) / (float)(n2.y - n1.y));
 		w->d.c.r = n1.c.r + a * (n2.c.r - n1.c.r) / dy;
 		w->d.c.g = n1.c.g + a * (n2.c.g - n1.c.g) / dy;
 		w->d.c.b = n1.c.b + a * (n2.c.b - n1.c.b) / dy;
-		w->n = malloc(sizeof(Vector2a));
+		w->n = malloc(sizeof(struct Vector1a));
 		w = w->n;
 	}
+	w->n = NULL;
 	return w;
-}
-int cmp_v(Vector2 n1, Vector2 n2) {
-	if(n1.y == n2.y) return n1.x > n2.x;
-	return n1.y < n2.y;
 }
 Vector2* arrSort(Vector2 n1, Vector2 n2, Vector2 n3) {
 	Vector2* s = malloc(3*sizeof(Vector2));
@@ -61,10 +87,7 @@ Vector2* arrSort(Vector2 n1, Vector2 n2, Vector2 n3) {
 	}
 	return s;
 }
-void drawTriangle(Vector2 o1, Vector2 o2, Vector2 o3) {
-	Vector2* n = arrSort(o1, o2, o3);
-	Vector2a* le = malloc(sizeof(Vector2a));
-	Vector2a* re = malloc(sizeof(Vector2a));
+void getTriangle(struct Vector1a* le, struct Vector1a* re, Vector2* n) {
 	if(n[0].y == n[1].y) {
 		getVLine(le, n[1], n[2]);
 		getVLine(re, n[0], n[2]);
@@ -73,7 +96,7 @@ void drawTriangle(Vector2 o1, Vector2 o2, Vector2 o3) {
 		getVLine(le, n[0], n[2]);
 		getVLine(re, n[0], n[1]);
 	}
-	else if(n[1].y * abs(n[2].x - n[0].x) / abs(n[2].y - n[0].y) + n[0].x < n[1].x) {
+	else if(n[1].y * abs(n[2].x - n[0].x) / abs(n[2].y - n[0].y) + n[0].x <= n[1].x) {
 		getVLine(le, n[0], n[2]);
 		getVLine(getVLine(re, n[0], n[1]), n[1], n[2]);
 	}
@@ -81,9 +104,15 @@ void drawTriangle(Vector2 o1, Vector2 o2, Vector2 o3) {
 		getVLine(getVLine(le, n[0], n[1]), n[1], n[2]);
 		getVLine(re, n[0], n[2]);
 	}
+}
+void drawTriangle(Vector2 o1, Vector2 o2, Vector2 o3) {
+	Vector2* n = arrSort(o1, o2, o3);
+	struct Vector1a* le = malloc(sizeof(struct Vector1a));
+	struct Vector1a* re = malloc(sizeof(struct Vector1a));
+	getTriangle(le, re, n);
 	int dy = n[2].y - n[0].y;
 	for(int a = 0; a < dy; a++) {
-		printf("\033[%d;%dH", a + n[0].y + 50, le->d.x * 2 + 100);
+		printf("\033[%d;%dH", a + n[0].y + tl_height / 2, le->d.x * 2 + tl_width);
 		uint8_t r = le->d.c.r;
 		uint8_t g = le->d.c.g;
 		uint8_t b = le->d.c.b;
@@ -103,8 +132,26 @@ void drawTriangle(Vector2 o1, Vector2 o2, Vector2 o3) {
 	printf("\033[48;2;0;0;0m");
 	fflush(stdout);
 	free(n);
+	freeV1a(le);
+	freeV1a(re);
 }
 Vector2 proyect(Vector3 w) {
 	return (Vector2){ (w.x / w.z), (w.y / w.z), w.c };
+}
+int isInside(Vector2 o1, Vector2 o2, Vector2 o3, Vector2 p) {
+	Vector2* n = arrSort(o1, o2, o3);
+	if(p.y < n[0].y || p.y > n[2].y) {
+		free(n);
+		return 0;
+	}
+	int r = 0;
+	struct Vector1a* le = malloc(sizeof(struct Vector1a));
+	struct Vector1a* re = malloc(sizeof(struct Vector1a));
+	getTriangle(le, re, n);
+	if(p.x >= atV1a(le, p.y - le->d.x).x && p.x <= atV1a(re, p.y - re->d.x).x) r = 1;
+	free(n);
+	freeV1a(le);
+	freeV1a(re);
+	return r;
 }
 #endif
