@@ -40,6 +40,7 @@ void freeV1a(struct Vector1a* init) {
 		free(x);
 	}
 }
+struct Vector3* g;
 struct Vector1 atV1a(struct Vector1a* init, int x) {
 	for(int a = 0; a < x; a++) init = init->n;
 	return init->d;
@@ -57,9 +58,9 @@ int cmpV2(const void* n1, const void* n2) {
 int cmpV3(const void* n1, const void* n2) {
 	Vector3 a = *(Vector3*)n1;
 	Vector3 b = *(Vector3*)n2;
-	if(a.z == b.z && a.y == b.y) return (a.x > b.x) - (a.x < b.x);
-	if(a.z == b.z) return (a.y > b.y) - (a.y < b.y);
-	return (a.z > b.z) - (a.z < b.z);
+	int n = g[(int)a.x].z + g[(int)a.y].z + g[(int)a.z].z;
+	int m = g[(int)b.x].z + g[(int)b.y].z + g[(int)b.z].z;
+	return (n < m) - (n > m);
 } 
 struct Vector1a* getVLine(struct Vector1a* ptr, Vector2 n1, Vector2 n2) {
 	struct Vector1a* w = ptr;
@@ -139,7 +140,7 @@ void drawTriangle(Vector2 o1, Vector2 o2, Vector2 o3) {
 		le = le->n;
 		re = re->n;
 	}
-	printf("\033[48;2;0;0;0m");
+	printf("\033[48;2;0;0;0m\033[%d;0H", tl_height);
 	fflush(stdout);
 	free(n);
 	freeV1a(le);
@@ -169,10 +170,10 @@ void drawPolygon(Vector2* arr, int size) {
 	qsort(arr, size, sizeof(Vector2), cmpV2);
 	for(int a = 0; a < size - 2; a++) drawTriangle(arr[a], arr[a+1], arr[a+2]);
 }
-void drawPolyhedron(Vector3* arr, int size) {
-	if(size < 3) return;
-	qsort(arr, size, sizeof(Vector3), cmpV3);
-	for(int a = 0; a < size - 2; a++)
-		drawTriangle(proyect(arr[a]), proyect(arr[a+1]), proyect(arr[a+2]));
+void drawPolyhedron(Vector3* arr, Vector3* v, int tris) {
+	g = arr;
+	qsort(v, tris, sizeof(Vector3), cmpV3);
+	for(int a = 0; a < tris; a++)
+		drawTriangle(proyect(arr[(int)v[a].x]), proyect(arr[(int)v[a].y]), proyect(arr[(int)v[a].z]));
 }
 #endif
