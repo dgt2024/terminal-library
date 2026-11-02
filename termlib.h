@@ -131,6 +131,11 @@ void getTriangle(struct Vector1a* le, struct Vector1a* re, Vector2* n) {
 	}
 }
 void drawTriangle(Vector2 o1, Vector2 o2, Vector2 o3) {
+/* code for debugging purposes
+	FILE* f = fopen("log", "a");
+	fprintf(f, "%d,%d %d,%d %d,%d\n", o1.x, o1.y, o2.x, o2.y, o3.x, o3.y);
+	fclose(f);
+*/
 	Vector2* n = arrSort(o1, o2, o3);
 	struct Vector1a* le = malloc(sizeof(struct Vector1a));
 	struct Vector1a* re = malloc(sizeof(struct Vector1a));
@@ -166,7 +171,7 @@ void drawTriangle(Vector2 o1, Vector2 o2, Vector2 o3) {
 	freeV1a(re);
 }
 Vector2 proyect(Vector3 w) {
-	return (Vector2){ (w.x / w.z) * tl_width, (w.y / w.z) * tl_height, w.c };
+	return (Vector2){ (w.x / w.z) * tl_width / 2, (w.y / w.z) * tl_height / 2, w.c };
 }
 int isInside(Vector2 o1, Vector2 o2, Vector2 o3, Vector2 p) {
 	Vector2* n = arrSort(o1, o2, o3);
@@ -187,7 +192,7 @@ int isInside(Vector2 o1, Vector2 o2, Vector2 o3, Vector2 p) {
 Vector2 rotate2D(Vector2 x, float a) {
 	return (Vector2){ magnV2(x) * cosf(a), magnV2(x) * sinf(a), x.c };
 }
-Vector3 rotate3Dy(Vector3 n, Vector2 axis, float a) {
+Vector3 rotate3DYEx(Vector3 n, Vector2 axis, float a) {
 	float x = n.x-axis.x, z = n.z-axis.y;
 	float c = cos(a), s = sin(a);
 	return (Vector3){
@@ -196,6 +201,9 @@ Vector3 rotate3Dy(Vector3 n, Vector2 axis, float a) {
 		axis.y+x*s+z*c,
 		n.c
 	};
+}
+Vector3 rotate3DY(Vector3 n, float a) {
+	return rotate3DYEx(n, (Vector2){ 0, 0, TL_WHITE }, a);
 }
 void drawPolygon(Vector2* arr, int size) {
 	if(size < 3) return;
