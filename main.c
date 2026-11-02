@@ -14,29 +14,29 @@ void rotatingSquare() {
 }
 int main() {
     Vector3 cubeS[12] = {
-        // Front (Z = 10)
-        { 0, 1, 2, TL_WHITE },
-        { 0, 2, 3, TL_WHITE },
-    
         // Back (Z = 20)
-        { 4, 6, 5, TL_WHITE },
-        { 4, 7, 6, TL_WHITE },
+        { 4, 5, 6, TL_WHITE },
+        { 4, 6, 7, TL_WHITE },
     
         // Left
-        { 0, 3, 7, TL_WHITE },
-        { 0, 7, 4, TL_WHITE },
+        { 0, 3, 4, TL_WHITE },
+        { 3, 4, 7, TL_WHITE },
     
         // Right
         { 1, 5, 6, TL_WHITE },
-        { 1, 6, 2, TL_WHITE },
-    
+        { 1, 2, 6, TL_WHITE },
+   
         // Top
-        { 0, 4, 5, TL_WHITE },
-        { 0, 5, 1, TL_WHITE },
+        { 1, 4, 5, TL_WHITE },
+        { 0, 1, 4, TL_WHITE },
     
         // Bottom
-        { 3, 2, 6, TL_WHITE },
-        { 3, 6, 7, TL_WHITE }
+        { 2, 3, 6, TL_WHITE },
+        { 3, 6, 7, TL_WHITE },
+        
+        // Front (Z = 10)
+        { 0, 1, 2, TL_WHITE },
+        { 0, 2, 3, TL_WHITE }
     };
     for(int n = 0; n < 200; n++) {
     	printf("\033[2J");
@@ -51,6 +51,6 @@ int main() {
 	        { -200+n, -100,  30, TL_WHITE }
 	    };
     	drawPolyhedron(cube, cubeS, 12);
-    	usleep(1000000/60);
+    	usleep(1000000/1);
     }
 }

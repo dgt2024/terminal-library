@@ -58,8 +58,8 @@ int cmpV2(const void* n1, const void* n2) {
 int cmpV3(const void* n1, const void* n2) {
 	Vector3 a = *(Vector3*)n1;
 	Vector3 b = *(Vector3*)n2;
-	int n = g[(int)a.x].z + g[(int)a.y].z + g[(int)a.z].z;
-	int m = g[(int)b.x].z + g[(int)b.y].z + g[(int)b.z].z;
+	int n = g[(int)a.x].x + g[(int)a.y].x + g[(int)a.z].x + g[(int)a.x].y + g[(int)a.y].y + g[(int)a.z].y + g[(int)a.x].z + g[(int)a.y].z + g[(int)a.z].z;
+	int m = g[(int)b.x].x + g[(int)b.y].x + g[(int)b.z].x + g[(int)a.x].y + g[(int)a.y].y + g[(int)a.z].y + g[(int)a.x].z + g[(int)a.y].z + g[(int)a.z].z;
 	return (n < m) - (n > m);
 } 
 struct Vector1a* getVLine(struct Vector1a* ptr, Vector2 n1, Vector2 n2) {
