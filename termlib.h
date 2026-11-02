@@ -15,6 +15,7 @@
 #define TL_GRAY ((Color){ 128, 128, 128 })
 int tl_height = 100;
 int tl_width = 100;
+int tl_azoom = 70;
 typedef struct Color {
 	uint8_t r, g, b;
 } Color;
@@ -55,13 +56,26 @@ int cmpV2(const void* n1, const void* n2) {
 	if(a.y == b.y) return (a.x > b.x) - (a.x < b.x);
 	return (a.y > b.y) - (a.y < b.y);
 }
+Vector3 avgTriangle(Vector3 n1, Vector3 n2, Vector3 n3) {
+	Vector3 w;
+	w.x = n1.x + n2.x + n3.x;
+	w.y = n1.y + n2.y + n3.y;
+	w.z = n1.z + n2.z + n3.z;
+	return w;
+}
+int magnV3(Vector3 n) {
+	return sqrtf(n.x*n.x + n.y*n.y + n.z*n.z);
+}
+int magnV2(Vector2 n) {
+	return sqrtf(n.x*n.x + n.y*n.y);
+}
 int cmpV3(const void* n1, const void* n2) {
 	Vector3 a = *(Vector3*)n1;
 	Vector3 b = *(Vector3*)n2;
-	int n = g[(int)a.x].x + g[(int)a.y].x + g[(int)a.z].x + g[(int)a.x].y + g[(int)a.y].y + g[(int)a.z].y + g[(int)a.x].z + g[(int)a.y].z + g[(int)a.z].z;
-	int m = g[(int)b.x].x + g[(int)b.y].x + g[(int)b.z].x + g[(int)a.x].y + g[(int)a.y].y + g[(int)a.z].y + g[(int)a.x].z + g[(int)a.y].z + g[(int)a.z].z;
-	return (n < m) - (n > m);
-} 
+	Vector3 n = avgTriangle(g[(int)a.x], g[(int)a.y], g[(int)a.z]);
+	Vector3 m = avgTriangle(g[(int)b.x], g[(int)b.y], g[(int)b.z]);
+	return (n.z < m.z) - (n.z > m.z);
+}
 struct Vector1a* getVLine(struct Vector1a* ptr, Vector2 n1, Vector2 n2) {
 	struct Vector1a* w = ptr;
 	int dy = n2.y - n1.y;
@@ -107,7 +121,7 @@ void getTriangle(struct Vector1a* le, struct Vector1a* re, Vector2* n) {
 		getVLine(le, n[0], n[1]);
 		getVLine(re, n[0], n[2]);
 	}
-	else if(n[1].y * abs(n[2].x - n[0].x) / abs(n[2].y - n[0].y) + n[0].x <= n[1].x) {
+	else if((n[1].y - n[0].y) * abs(n[2].x - n[0].x) / abs(n[2].y - n[0].y) + n[0].x <= n[1].x) {
 		getVLine(le, n[0], n[2]);
 		getVLine(getVLine(re, n[0], n[1]), n[1], n[2]);
 	}
@@ -128,6 +142,11 @@ void drawTriangle(Vector2 o1, Vector2 o2, Vector2 o3) {
 		uint8_t g = le->d.c.g;
 		uint8_t b = le->d.c.b;
 		int dx = re->d.x - le->d.x;
+		if(dx < 1) {
+			struct Vector1a* t = le;
+			le = re;
+			re = t;
+		}
 		if(!dx) printf("\033[48;2;%d;%d;%dm  ", r, g, b);
 		else {
 			for(int i = 0; i <= dx; i++) {
@@ -147,7 +166,7 @@ void drawTriangle(Vector2 o1, Vector2 o2, Vector2 o3) {
 	freeV1a(re);
 }
 Vector2 proyect(Vector3 w) {
-	return (Vector2){ (w.x / w.z), (w.y / w.z), w.c };
+	return (Vector2){ (w.x / w.z) * tl_width, (w.y / w.z) * tl_height, w.c };
 }
 int isInside(Vector2 o1, Vector2 o2, Vector2 o3, Vector2 p) {
 	Vector2* n = arrSort(o1, o2, o3);
@@ -164,6 +183,19 @@ int isInside(Vector2 o1, Vector2 o2, Vector2 o3, Vector2 p) {
 	freeV1a(le);
 	freeV1a(re);
 	return r;
+}
+Vector2 rotate2D(Vector2 x, float a) {
+	return (Vector2){ magnV2(x) * cosf(a), magnV2(x) * sinf(a), x.c };
+}
+Vector3 rotate3Dy(Vector3 n, Vector2 axis, float a) {
+	float x = n.x-axis.x, z = n.z-axis.y;
+	float c = cos(a), s = sin(a);
+	return (Vector3){
+		axis.x+x*c-z*s,
+		n.y,
+		axis.y+x*s+z*c,
+		n.c
+	};
 }
 void drawPolygon(Vector2* arr, int size) {
 	if(size < 3) return;
