@@ -13,11 +13,15 @@ void rotatingSquare() {
 	}
 }
 int main() {
-	Vector2 poly[4] = {
-		{ -50, -50, TL_WHITE },
-		{ 50, -50, TL_RED },
-		{ 50, 50, TL_GREEN },
-		{ -50, 50, TL_BLUE }
-	};
-	drawPolygon(poly, 4);
+	Vector3 cube[8] = {
+        { -200, -500, 10, TL_WHITE },
+        {  200, -500, 10, TL_RED },
+        {  200, -100, 10, TL_GREEN },
+        { -200, -100, 10, TL_BLUE },
+        { -200, -500,  20, TL_YELLOW },
+        {  200, -500,  20, TL_CYAN },
+        {  200, -100,  20, TL_MAGENTA },
+        { -200, -100,  20, TL_WHITE }
+    };
+    drawPolyhedron(cube, 8);
 }

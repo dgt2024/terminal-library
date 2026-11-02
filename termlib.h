@@ -44,13 +44,23 @@ struct Vector1 atV1a(struct Vector1a* init, int x) {
 	for(int a = 0; a < x; a++) init = init->n;
 	return init->d;
 }
-int cmp_v(Vector2 n1, Vector2 n2) {
-	if(n1.y == n2.y) return n1.x > n2.x;
+int absCmpV2(Vector2 n1, Vector2 n2) {
+	if(n1.y == n2.y) return n1.x < n2.x;
 	return n1.y < n2.y;
 }
-int cmp_int(int f, int s) {
-	return (f > s) - (f < s);
+int cmpV2(const void* n1, const void* n2) {
+	Vector2 a = *(Vector2*)n1;
+	Vector2 b = *(Vector2*)n2;
+	if(a.y == b.y) return (a.x > b.x) - (a.x < b.x);
+	return (a.y > b.y) - (a.y < b.y);
 }
+int cmpV3(const void* n1, const void* n2) {
+	Vector3 a = *(Vector3*)n1;
+	Vector3 b = *(Vector3*)n2;
+	if(a.z == b.z && a.y == b.y) return (a.x > b.x) - (a.x < b.x);
+	if(a.z == b.z) return (a.y > b.y) - (a.y < b.y);
+	return (a.z > b.z) - (a.z < b.z);
+} 
 struct Vector1a* getVLine(struct Vector1a* ptr, Vector2 n1, Vector2 n2) {
 	struct Vector1a* w = ptr;
 	int dy = n2.y - n1.y;
@@ -67,9 +77,9 @@ struct Vector1a* getVLine(struct Vector1a* ptr, Vector2 n1, Vector2 n2) {
 }
 Vector2* arrSort(Vector2 n1, Vector2 n2, Vector2 n3) {
 	Vector2* s = malloc(3*sizeof(Vector2));
-	int x = cmp_v(n1, n2);
-	int y = cmp_v(n2, n3);
-	int z = cmp_v(n3, n1);
+	int x = absCmpV2(n1, n2);
+	int y = absCmpV2(n2, n3);
+	int z = absCmpV2(n3, n1);
 	if(x && !z) {
 		s[0] = n1;
 		s[1] = y ? n2 : n3;
@@ -89,12 +99,12 @@ Vector2* arrSort(Vector2 n1, Vector2 n2, Vector2 n3) {
 }
 void getTriangle(struct Vector1a* le, struct Vector1a* re, Vector2* n) {
 	if(n[0].y == n[1].y) {
-		getVLine(le, n[1], n[2]);
-		getVLine(re, n[0], n[2]);
+		getVLine(le, n[0], n[2]);
+		getVLine(re, n[1], n[2]);
 	}
 	else if(n[1].y == n[2].y) {
-		getVLine(le, n[0], n[2]);
-		getVLine(re, n[0], n[1]);
+		getVLine(le, n[0], n[1]);
+		getVLine(re, n[0], n[2]);
 	}
 	else if(n[1].y * abs(n[2].x - n[0].x) / abs(n[2].y - n[0].y) + n[0].x <= n[1].x) {
 		getVLine(le, n[0], n[2]);
@@ -153,5 +163,16 @@ int isInside(Vector2 o1, Vector2 o2, Vector2 o3, Vector2 p) {
 	freeV1a(le);
 	freeV1a(re);
 	return r;
+}
+void drawPolygon(Vector2* arr, int size) {
+	if(size < 3) return;
+	qsort(arr, size, sizeof(Vector2), cmpV2);
+	for(int a = 0; a < size - 2; a++) drawTriangle(arr[a], arr[a+1], arr[a+2]);
+}
+void drawPolyhedron(Vector3* arr, int size) {
+	if(size < 3) return;
+	qsort(arr, size, sizeof(Vector3), cmpV3);
+	for(int a = 0; a < size - 2; a++)
+		drawTriangle(proyect(arr[a]), proyect(arr[a+1]), proyect(arr[a+2]));
 }
 #endif
