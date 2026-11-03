@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <unistd.h>
+#include <string.h>
 #define TL_BLACK ((Color){ 0, 0, 0 })
 #define TL_RED ((Color){ 255, 0, 0 })
 #define TL_GREEN ((Color){ 0, 255, 0 })
@@ -13,9 +14,7 @@
 #define TL_CYAN ((Color){ 0, 255, 255 })
 #define TL_WHITE ((Color){ 255, 255, 255 })
 #define TL_GRAY ((Color){ 128, 128, 128 })
-int tl_height = 100;
-int tl_width = 100;
-int tl_azoom = 70;
+
 typedef struct Color {
 	uint8_t r, g, b;
 } Color;
@@ -23,6 +22,13 @@ typedef struct Vector2 {
 	int x, y;
 	Color c;
 } Vector2;
+typedef struct Vector3 {
+	float x, y, z;
+	Color c;
+} Vector3;
+typedef struct Vector3a {
+	float x, y, z;
+} Vector3a;
 struct Vector1a {
 	struct Vector1 {
 		int x;
@@ -30,10 +36,13 @@ struct Vector1a {
 	} d;
 	struct Vector1a* n;
 };
-typedef struct Vector3 {
-	float x, y, z;
-	Color c;
-} Vector3;
+
+int tl_height = 100;
+int tl_width = 100;
+int tl_framerate = 30;
+Color* tl_buffer;
+struct Vector3* g;
+
 void freeV1a(struct Vector1a* init) {
 	while(init) {
 		struct Vector1a* x = init;
@@ -41,7 +50,6 @@ void freeV1a(struct Vector1a* init) {
 		free(x);
 	}
 }
-struct Vector3* g;
 struct Vector1 atV1a(struct Vector1a* init, int x) {
 	for(int a = 0; a < x; a++) init = init->n;
 	return init->d;
@@ -131,18 +139,15 @@ void getTriangle(struct Vector1a* le, struct Vector1a* re, Vector2* n) {
 	}
 }
 void drawTriangle(Vector2 o1, Vector2 o2, Vector2 o3) {
-/* code for debugging purposes
 	FILE* f = fopen("log", "a");
 	fprintf(f, "%d,%d %d,%d %d,%d\n", o1.x, o1.y, o2.x, o2.y, o3.x, o3.y);
 	fclose(f);
-*/
 	Vector2* n = arrSort(o1, o2, o3);
 	struct Vector1a* le = malloc(sizeof(struct Vector1a));
 	struct Vector1a* re = malloc(sizeof(struct Vector1a));
 	getTriangle(le, re, n);
 	int dy = n[2].y - n[0].y;
 	for(int a = 0; a < dy; a++) {
-		printf("\033[%d;%dH", a + n[0].y + tl_height / 2, le->d.x * 2 + tl_width);
 		uint8_t r = le->d.c.r;
 		uint8_t g = le->d.c.g;
 		uint8_t b = le->d.c.b;
@@ -152,26 +157,33 @@ void drawTriangle(Vector2 o1, Vector2 o2, Vector2 o3) {
 			le = re;
 			re = t;
 		}
-		if(!dx) printf("\033[48;2;%d;%d;%dm  ", r, g, b);
+		struct Color* bf = tl_buffer + (a + n[0].y + tl_height / 2) * tl_width + le->d.x + tl_width / 2;
+		if(!dx) {
+			bf->r = r;
+			bf->g = g;
+			bf->b = b;
+		}
 		else {
 			for(int i = 0; i <= dx; i++) {
-				printf("\033[48;2;%d;%d;%dm  ", r, g, b);
+				bf->r = r;
+				bf->g = g;
+				bf->b = b;
 				r += (re->d.c.r - le->d.c.r) / dx;
 				g += (re->d.c.g - le->d.c.g) / dx;
 				b += (re->d.c.b - le->d.c.b) / dx;
+				bf++;
 			}
 		}
 		le = le->n;
 		re = re->n;
 	}
-	printf("\033[48;2;0;0;0m\033[%d;0H", tl_height);
 	fflush(stdout);
 	free(n);
 	freeV1a(le);
 	freeV1a(re);
 }
 Vector2 proyect(Vector3 w) {
-	return (Vector2){ (w.x / w.z) * tl_width / 2, (w.y / w.z) * tl_height / 2, w.c };
+	return (Vector2){ (w.x / w.z) * tl_width, (w.y / w.z) * tl_height, w.c };
 }
 int isInside(Vector2 o1, Vector2 o2, Vector2 o3, Vector2 p) {
 	Vector2* n = arrSort(o1, o2, o3);
@@ -189,12 +201,12 @@ int isInside(Vector2 o1, Vector2 o2, Vector2 o3, Vector2 p) {
 	freeV1a(re);
 	return r;
 }
-Vector2 rotate2D(Vector2 x, float a) {
-	return (Vector2){ magnV2(x) * cosf(a), magnV2(x) * sinf(a), x.c };
-}
 Vector3 rotate3DYEx(Vector3 n, Vector2 axis, float a) {
 	float x = n.x-axis.x, z = n.z-axis.y;
-	float c = cos(a), s = sin(a);
+	float c = cosf(a), s = sinf(a);
+	FILE* f = fopen("log", "a");
+	fprintf(f, "%f\n", axis.x+x*c-z*s-n.x);
+	fclose(f);
 	return (Vector3){
 		axis.x+x*c-z*s,
 		n.y,
@@ -210,10 +222,37 @@ void drawPolygon(Vector2* arr, int size) {
 	qsort(arr, size, sizeof(Vector2), cmpV2);
 	for(int a = 0; a < size - 2; a++) drawTriangle(arr[a], arr[a+1], arr[a+2]);
 }
-void drawPolyhedron(Vector3* arr, Vector3* v, int tris) {
+void drawPolyhedron(Vector3* arr, Vector3a* v, int tris) {
 	g = arr;
 	qsort(v, tris, sizeof(Vector3), cmpV3);
 	for(int a = 0; a < tris; a++)
 		drawTriangle(proyect(arr[(int)v[a].x]), proyect(arr[(int)v[a].y]), proyect(arr[(int)v[a].z]));
+}
+void renderFrame() {
+	printf("\033[H\033[0m");
+	Color* bc = tl_buffer;
+	for(int y = 0; y < tl_height; y++) {
+		for(int x = 0; x < tl_width; x++) {
+			printf("\033[48;2;%d;%d;%dm  ", bc->r, bc->g, bc->b);
+			bc++;
+		}
+		putchar('\n');
+	}
+	memset(tl_buffer, 0, tl_width * tl_height * sizeof(Color));
+	usleep(1000000 / tl_framerate);
+}
+void editDeviceEx(int height, int width, int framerate, Color* buffer) {
+	tl_height = height;
+	tl_width = width;
+	tl_framerate = framerate;
+	tl_buffer = buffer;
+}
+void editDevice(int height, int width, int framerate) {
+	Color* buffer = calloc(tl_height * tl_width, sizeof(Color));
+	if(!buffer) {
+		printf("\033[0;0Htermlib.h error: Could not allocate buffer\n");
+		exit(1);
+	}
+	editDeviceEx(height, width, framerate, buffer);
 }
 #endif
