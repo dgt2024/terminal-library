@@ -43,6 +43,11 @@ int tl_framerate = 30;
 Color* tl_buffer;
 struct Vector3* g;
 
+void tlmerror() {
+	perror("termlib.h allocation error\n");
+	exit(1);
+}
+
 void freeV1a(struct Vector1a* init) {
 	while(init) {
 		struct Vector1a* x = init;
@@ -82,17 +87,19 @@ int cmpV3(const void* n1, const void* n2) {
 	Vector3 b = *(Vector3*)n2;
 	Vector3 n = avgTriangle(g[(int)a.x], g[(int)a.y], g[(int)a.z]);
 	Vector3 m = avgTriangle(g[(int)b.x], g[(int)b.y], g[(int)b.z]);
-	return (n.z < m.z) - (n.z > m.z);
+	return (magnV3(n) < magnV3(m)) - (magnV3(n) > magnV3(m));
 }
 struct Vector1a* getVLine(struct Vector1a* ptr, Vector2 n1, Vector2 n2) {
 	struct Vector1a* w = ptr;
 	int dy = n2.y - n1.y;
 	for(int a = 1; a <= dy; a++) {
 		w->d.x = n1.x + (int)(a * (n2.x - n1.x) / (float)(n2.y - n1.y));
-		w->d.c.r = n1.c.r + a * (n2.c.r - n1.c.r) / dy;
-		w->d.c.g = n1.c.g + a * (n2.c.g - n1.c.g) / dy;
-		w->d.c.b = n1.c.b + a * (n2.c.b - n1.c.b) / dy;
+		float xd = (1 - (w->d.x - floor(w->d.x))) * a;
+		w->d.c.r = n1.c.r + xd * (n2.c.r - n1.c.r) / dy;
+		w->d.c.g = n1.c.g + xd * (n2.c.g - n1.c.g) / dy;
+		w->d.c.b = n1.c.b + xd * (n2.c.b - n1.c.b) / dy;
 		w->n = malloc(sizeof(struct Vector1a));
+		if(!w->n) tlmerror();
 		w = w->n;
 	}
 	w->n = NULL;
@@ -224,7 +231,7 @@ void drawPolygon(Vector2* arr, int size) {
 }
 void drawPolyhedron(Vector3* arr, Vector3a* v, int tris) {
 	g = arr;
-	qsort(v, tris, sizeof(Vector3), cmpV3);
+	qsort(v, tris, sizeof(Vector3a), cmpV3);
 	for(int a = 0; a < tris; a++)
 		drawTriangle(proyect(arr[(int)v[a].x]), proyect(arr[(int)v[a].y]), proyect(arr[(int)v[a].z]));
 }
